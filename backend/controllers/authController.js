@@ -2,6 +2,9 @@ const User = require('../models/User')
 const validRoles = require('../configs/validRoles')
 const { generateTokens } = require('../utils/generateTokens')
 const isProd = process.env.NODE_ENV === 'production';
+const jwt = require('jsonwebtoken')
+const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
+const  { sendVerificationCode }= require('../services/email/sendVerificationCode')
 
 
 const registerUser = async (req, res) => {
@@ -40,6 +43,7 @@ const registerUser = async (req, res) => {
 
     const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
 
+
     const user = new User({
       username,
       email: email.toLowerCase(),
@@ -55,8 +59,8 @@ const registerUser = async (req, res) => {
 
     await user.save();
 
-    //DEV
-    console.log(`Verification CODE for ${email}: ${verificationCode}`);
+    await sendVerificationCode(user.email , user.username , verificationCode)
+    
 
     res.status(201).json({
       success: true,
@@ -199,8 +203,80 @@ const loginUser = async (req, res) => {
   }
 };
 
+
+
+const refreshToken = async (req, res) => {
+  const refreshToken = req.cookies?.refreshToken;
+  if (!refreshToken) {
+    return res.status(401).json({
+      success: false,
+      errorCode: 'NO_TOKEN',
+      message: 'Unauthorized: No refresh token.'
+    });
+  }
+
+  try {
+    const user = await User.findOne({ refreshToken });
+    if (!user) {
+      return res.status(403).json({
+        success: false,
+        errorCode: 'INVALID_REFRESH',
+        message: 'Forbidden: Invalid refresh token.'
+      });
+    }
+
+    jwt.verify(refreshToken, REFRESH_TOKEN_SECRET, (error, decoded) => {
+      if (error || decoded.id !== user._id.toString()) {
+        return res.status(403).json({
+          success: false,
+          errorCode: 'INVALID_REFRESH',
+          message: 'Forbidden: Invalid refresh token.'
+        });
+      }
+
+      const { accessToken } = generateTokens(user);
+      res.json({
+        success: true,
+        message: 'Token refreshed.',
+        data: { accessToken }
+      });
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      errorCode: 'SERVER_ERROR'
+    });
+  }
+};
+
+const logoutUser = async (req, res) => {
+  const refreshToken = req.cookies?.refreshToken;
+
+  if (refreshToken) {
+    const user = await User.findOne({ refreshToken });
+    if (user) {
+      user.refreshToken = undefined;
+      await user.save();
+    }
+  }
+
+  res.clearCookie('refreshToken', {
+    httpOnly: true,
+    secure: isProd,
+    sameSite:isProd ? 'None' : 'Lax',
+    path: '/'
+  });
+
+  res.status(204).send();
+};
+
+
+
+
 module.exports = {
     registerUser,
     verifyEmailCode,
-    loginUser
+    loginUser,
+    logoutUser,
+    refreshToken,
 }

@@ -6,6 +6,7 @@ const connectDataBase = require('./configs/DBconnection')
 const { default: mongoose } = require('mongoose');
 const errorLogger = require('./middlewares/errorLogger')
 const {logger} = require('./middlewares/logevents')
+const verifyJWT = require('./middlewares/verifyJWT')
 const app = express()
 
 
@@ -21,6 +22,10 @@ app.use(express.urlencoded({ extended: false }));
 
 
 app.use('/auth' , require('./routes/auth'))
+
+
+app.use(verifyJWT);
+app.use('/user', require('./routes/user/user') );
 
 
 

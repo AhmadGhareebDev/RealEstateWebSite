@@ -18,6 +18,8 @@
 
     "mongoose": "^8.19.3",
 
+    "nodemailer": "^7.0.10",
+
     "nodemon": "^3.1.10",
 
     "passport": "^0.7.0",
@@ -25,6 +27,8 @@
     "passport-jwt": "^4.0.1",
 
     "passport-local": "^1.0.0",
+
+    "resend": "^6.4.2",
 
     "uuid": "^13.0.0"
 

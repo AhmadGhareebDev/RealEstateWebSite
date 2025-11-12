@@ -28,7 +28,7 @@ const verifyJWT = (req, res , next) => {
             }
 
             req.user = {
-                id: decoded._id,
+                id: decoded.id,
                 email: decoded.email,
                 role: decoded.role
             }

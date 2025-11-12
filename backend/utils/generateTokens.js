@@ -6,7 +6,7 @@ const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
 const generateTokens = (user) => {
     const accessToken = jwt.sign(
         {
-            id: user._id,
+            id: user.id,
             email: user.email,
             role: user.role
         },
@@ -19,7 +19,7 @@ const generateTokens = (user) => {
 
     const refreshToken = jwt.sign(
         {
-            id: user._id
+            id: user.id
         },
         REFRESH_TOKEN_SECRET,
         {
