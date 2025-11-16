@@ -26,7 +26,7 @@ app.use('/auth' , require('./routes/auth'))
 
 app.use(verifyJWT);
 app.use('/user', require('./routes/user/user') );
-
+app.use('/property' , require('./routes/user/property.js'))
 
 
 app.use(errorLogger)

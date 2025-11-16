@@ -10,7 +10,7 @@ const userSchema = new mongoose.Schema({
   location: String,
   phone: String,
   profileImage: String,
-  role: { type: String, enum: ['buyer', 'seller', 'admin'], required: true },
+  role: { type: String, enum: ['buyer', 'agent', 'admin'], required: true },
   refreshToken: String,
   emailVerificationCode: String,
   emailVerificationExpires: Date,
@@ -27,5 +27,27 @@ userSchema.pre('save', async function (next) {
 userSchema.methods.comparePassword = async function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };
+
+userSchema.virtual('reviews' , {
+  ref: 'Review',
+  localField: '_id',
+  foreignField: 'agent'
+})
+
+userSchema.virtual('averageRating').get(function() {
+  if(!this.reviews || this.reviews.length === 0) {
+    return 0
+  }
+  const sum = this.reviews.reduce((total , r) => total + r.rating , 0)
+  return Number((sum / this.reviews.length).toFixed(1));  
+})
+
+userSchema.virtual('reviewCount').get(function () {
+  return this.reviews ? this.reviews.length : 0;
+});
+
+userSchema.set('toJSON', { virtuals: true });
+userSchema.set('toObject', { virtuals: true });
+
 
 module.exports = mongoose.model('User', userSchema);

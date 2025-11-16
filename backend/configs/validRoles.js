@@ -1,7 +1,13 @@
+const { getOverlappingDaysInIntervals } = require("date-fns/getOverlappingDaysInIntervals")
+
 const validRoles = [
     "buyer",
-    "seller",
+    "agent",
     "admin"
 ]
 
 module.exports = validRoles
+
+
+
+
