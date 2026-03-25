@@ -1,17 +1,15 @@
 const { format } = require('date-fns')
-let uuid;
-import('uuid').then(module => {
-  uuid = module.v4;
-});const fs = require('fs')
+const crypto = require('crypto');
+const fs = require('fs')
 const fsPromises = require('fs').promises
 const path = require('path')
 
 
 
 const logEvent = async (message , logName) => {
-
+    const generateUUID = () => crypto.randomUUID()
     const date = `${format(new Date() , 'yyyy/MM/dd\tHH:mm:ss')}`
-    const logItem  = `${uuid()}\t${date}\t${message}\n`
+    const logItem  = `${generateUUID()}\t${date}\t${message}\n`
 
     try {
 

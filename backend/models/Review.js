@@ -1,43 +1,55 @@
 const mongoose = require('mongoose');
 
 const reviewSchema = new mongoose.Schema({
-  
-  agent: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',           
-    required: true
-  },
-
-  
-  buyer: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-
   rating: {
     type: Number,
     required: true,
     min: 1,
     max: 5
   },
-
   comment: {
     type: String,
-    required: true,
     trim: true,
-    minlength: 10,
-    maxlength: 500
+    maxlength: 1000
   },
-
-  createdAt: {
-    type: Date,
-    default: Date.now
+  reviewer: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  property: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Property',
+    default: null
+  },
+  agent: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
   }
+}, { timestamps: true });
+
+reviewSchema.index({ reviewer: 1, property: 1 }, { 
+  unique: true, 
+  partialFilterExpression: { property: { $ne: null } } 
 });
 
-reviewSchema.index({ agent: 1, buyer: 1 }, { unique: true });
+reviewSchema.index({ reviewer: 1, agent: 1 }, { 
+  unique: true, 
+  partialFilterExpression: { agent: { $ne: null } } 
+});
 
-reviewSchema.index({ agent: 1, createdAt: -1 });
+reviewSchema.pre('save', function(next) {
+  const hasProperty = this.property !== null && this.property !== undefined;
+  const hasAgent = this.agent !== null && this.agent !== undefined;
+
+  if (hasProperty && hasAgent) {
+    return next(new Error('Review cannot target both property and agent'));
+  }
+  if (!hasProperty && !hasAgent) {
+    return next(new Error('Review must target either a property or an agent'));
+  }
+  next();
+});
 
 module.exports = mongoose.model('Review', reviewSchema);

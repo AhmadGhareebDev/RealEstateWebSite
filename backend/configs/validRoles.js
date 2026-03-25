@@ -1,13 +1,11 @@
-const { getOverlappingDaysInIntervals } = require("date-fns/getOverlappingDaysInIntervals")
-
+/**
+ * Valid Roles
+ * Only two roles exist: "user" and "agent".
+ * No admin role — there is no admin panel in this system.
+ */
 const validRoles = [
-    "buyer",
-    "agent",
-    "admin"
-]
+  "user",
+  "agent"
+];
 
-module.exports = validRoles
-
-
-
-
+module.exports = validRoles;
