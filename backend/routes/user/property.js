@@ -19,7 +19,6 @@ const {
   contactListingSchema
 } = require('../../schemas/propertySchemas');
 
-// Create listing
 router.post('/',
   verifyJWT,
   uploadProperty.array('images', 20),

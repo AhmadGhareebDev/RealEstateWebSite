@@ -6,7 +6,6 @@ const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
 const { sendVerificationCode } = require('../services/email/sendVerificationCode');
 const AgentVerification = require('../models/AgentVerification');
 
-// Register new user
 const registerUser = async (req, res) => {
   const { username, email, password, phone, location } = req.body;
 
@@ -35,7 +34,6 @@ const registerUser = async (req, res) => {
     const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
     const profileImageUrl = req.file ? req.file.path : '';
 
-    // Role is always "user" for this endpoint
     const user = new User({
       username,
       email: email.toLowerCase(),
@@ -72,7 +70,6 @@ const registerUser = async (req, res) => {
   }
 };
 
-// Register new agent
 const registerAgent = async (req, res) => {
   const { username, email, password, phone, licenseNumber, licenseState, fullName, location, brokerage } = req.body;
 
@@ -96,7 +93,6 @@ const registerAgent = async (req, res) => {
       });
     }
 
-    // Check the license against the fake licenses collection
     const license = await AgentVerification.findOne({
       licenseNumber: licenseNumber.trim(),
       state: licenseState.trim().toUpperCase(),
@@ -104,7 +100,6 @@ const registerAgent = async (req, res) => {
       status: 'active'
     });
 
-    // If no matching license → reject with a clear error message
     if (!license) {
       return res.status(400).json({
         success: false,
@@ -156,7 +151,6 @@ const registerAgent = async (req, res) => {
   }
 };
 
-// Verify email code
 const verifyEmailCode = async (req, res) => {
   const { email, code } = req.body;
 
@@ -203,7 +197,6 @@ const verifyEmailCode = async (req, res) => {
   }
 };
 
-// Resend verification code
 const resendVerificationCode = async (req, res) => {
   const { email } = req.body;
 
@@ -256,7 +249,6 @@ const resendVerificationCode = async (req, res) => {
   }
 };
 
-// Login user
 const loginUser = async (req, res) => {
   const { email, password } = req.body;
 
@@ -295,7 +287,6 @@ const loginUser = async (req, res) => {
       });
     }
 
-    // Generate tokens — accessToken includes role for permission checks
     const { accessToken, refreshToken } = generateTokens(user);
 
     user.refreshToken = refreshToken;
@@ -318,7 +309,12 @@ const loginUser = async (req, res) => {
           id: user._id,
           username: user.username,
           email: user.email,
-          role: user.role
+          role: user.role,
+          phone: user.phone,
+          location: user.location,
+          profileImage: user.profileImage,
+          isVerified: user.isVerified,
+          brokerage: user.brokerage
         }
       }
     });
@@ -332,7 +328,6 @@ const loginUser = async (req, res) => {
   }
 };
 
-// Refresh access token
 const refreshToken = async (req, res) => {
   const refreshToken = req.cookies?.refreshToken;
   if (!refreshToken) {
@@ -372,7 +367,12 @@ const refreshToken = async (req, res) => {
             id: user._id,
             email: user.email,
             role: user.role,
-            username: user.username
+            username: user.username,
+            phone: user.phone,
+            location: user.location,
+            profileImage: user.profileImage,
+            isVerified: user.isVerified,
+            brokerage: user.brokerage
           }
         }
       });
@@ -385,7 +385,6 @@ const refreshToken = async (req, res) => {
   }
 };
 
-// Logout user
 const logoutUser = async (req, res) => {
   const refreshToken = req.cookies?.refreshToken;
 

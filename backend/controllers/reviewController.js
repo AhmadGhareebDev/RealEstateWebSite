@@ -2,6 +2,28 @@ const Review = require('../models/Review');
 const Property = require('../models/Property');
 const User = require('../models/User');
 
+const getMyReviews = async (req, res) => {
+  try {
+    const reviews = await Review.find({ reviewer: req.user.id })
+      .populate('property', 'title location')
+      .populate('agent', 'username profileImage')
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      message: 'My reviews retrieved successfully',
+      data: reviews
+    });
+  } catch (error) {
+    console.error('Get my reviews error:', error);
+    res.status(500).json({
+      success: false,
+      errorCode: "SERVER_ERROR",
+      message: "Server error"
+    });
+  }
+};
+
 const getPropertyReviews = async (req, res) => {
   const { propertyId } = req.params;
   
@@ -39,6 +61,14 @@ const createPropertyReview = async (req, res) => {
       });
     }
 
+    if (property.listedBy?.toString?.() === reviewerId?.toString?.()) {
+      return res.status(403).json({
+        success: false,
+        errorCode: "FORBIDDEN",
+        message: "You cannot review your own listing"
+      });
+    }
+
     const alreadyReviewed = await Review.findOne({ reviewer: reviewerId, property: propertyId });
     if (alreadyReviewed) {
       return res.status(400).json({ 
@@ -57,7 +87,6 @@ const createPropertyReview = async (req, res) => {
 
     await review.save();
     
-    // Populate reviewer details for immediate frontend display
     await review.populate('reviewer', 'username profileImage');
 
     res.status(201).json({ 
@@ -190,4 +219,11 @@ const deleteReview = async (req, res) => {
   }
 };
 
-module.exports = { createPropertyReview, createAgentReview, updateReview, deleteReview, getPropertyReviews };
+module.exports = {
+  createPropertyReview,
+  createAgentReview,
+  updateReview,
+  deleteReview,
+  getPropertyReviews,
+  getMyReviews
+};

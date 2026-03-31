@@ -6,7 +6,6 @@ const toggleFavorite = async (req, res) => {
   const propertyId = req.params.propertyId;
 
   try {
-    // Check if property exists and is active
     const property = await Property.findById(propertyId);
     if (!property || property.status !== 'active') {
       return res.status(404).json({ 
@@ -65,19 +64,24 @@ const getMyFavorites = async (req, res) => {
       .populate({
         path: 'property',
         match: { status: 'active' },
-        populate: { 
-          path: 'listedBy', 
-          select: 'username role isVerified profileImage'
-        }
+        populate: [
+          { 
+            path: 'listedBy', 
+            select: 'username role isVerified profileImage'
+          },
+          {
+            path: 'reviews',
+            select: 'rating'
+          }
+        ]
       });
 
-    // Filter out favorites where property is null (deleted or inactive)
     const validFavorites = favorites.filter(f => f.property !== null);
 
     res.json({
       success: true,
       message: "Favorites retrieved successfully",
-      data: validFavorites  // Return favorites with {property: ...} structure
+      data: validFavorites  
     });
   } catch (error) {
     console.error('Get favorites error:', error);

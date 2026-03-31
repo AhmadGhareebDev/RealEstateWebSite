@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 
-// Property listing model
 const propertySchema = new mongoose.Schema({
   title:       { type: String, required: true },
   price:       { type: Number, required: true },
@@ -12,24 +11,20 @@ const propertySchema = new mongoose.Schema({
   description: { type: String, required: true },
   type:        { type: String, enum: ['sale', 'rent'], required: true },
 
-  // Listing type: fsbo or agent
   listingType: {
     type: String,
     enum: ['fsbo', 'agent'],
     required: true
   },
 
-  // Listing owner
   listedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
   },
 
-  // Agent showcase listing
   isShowcase: { type: Boolean, default: false },
 
-  // Listing status
   status: {
     type: String,
     enum: ['active', 'sold', 'rented', 'pending'],

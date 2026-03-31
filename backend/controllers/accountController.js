@@ -96,7 +96,6 @@ const updateMyProfile = async (req, res) => {
 
 const deleteMyAccount = async (req, res) => {
   try {
-    // Use listedBy (renamed from postedBy) to match updated Property model
     await Property.deleteMany({ listedBy: req.user.id });
     await User.findByIdAndDelete(req.user.id);
 

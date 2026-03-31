@@ -21,7 +21,6 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: false }));
 
-// Rate limiting
 app.use('/api/auth', limiter);
 app.use('/api/listings', limiter);
 
@@ -36,7 +35,6 @@ app.use('/review', require('./routes/user/review'));
 app.use('/favorite', require('./routes/user/favorite'));
 app.use('/upload', require('./routes/user/upload'));
 
-// Swagger docs
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
   explorer: true,
   customCss: '.swagger-ui .topbar { display: none }',

@@ -1,7 +1,6 @@
 const mongoose = require("mongoose")
 const DATABASE_URL = process.env.DATABASE_URL;
 
-// Connect to database with retry logic
 const connectDataBase = async () => {
     const maxRetries = 5;
     const retryDelay = 5000;

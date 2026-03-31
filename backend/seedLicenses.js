@@ -12,7 +12,8 @@ const fakeLicenseDB = [
   { licenseNumber: '20251117', state: 'CA', agentName: 'Jamal Unes' },  
   { licenseNumber: '55556666', state: 'NY', agentName: 'Ahmed Khan' },
   { licenseNumber: '77778888', state: 'TX', agentName: 'Maria Garcia' },
-  { licenseNumber: '99990000', state: 'FL', agentName: 'Chris Wilson' }
+  { licenseNumber: '99990000', state: 'FL', agentName: 'Chris Wilson' },
+  { licenseNumber: 'LC-8921-X', state: 'CALIFORNIA', agentName: 'Alexander Ghareeb' }
 ];
 
 mongoose.connect(process.env.DATABASE_URL)

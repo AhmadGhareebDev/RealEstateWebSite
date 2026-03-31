@@ -1,15 +1,6 @@
 const Property = require('../models/Property');
 const User = require('../models/User');
 
-/**
- * createProperty — POST /api/listings
- * ------------------------------------
- * Permission rules enforced here:
- * - Users (role=user) can ONLY create listingType: "fsbo"
- * - Agents (role=agent) can ONLY create listingType: "agent"
- * - Only agents can set isShowcase: true
- * - listedBy is always set from the authenticated user's ID
- */
 const createProperty = async (req, res) => {
   const {
     title, price, location, bedrooms, bathrooms, area,
@@ -37,7 +28,6 @@ const createProperty = async (req, res) => {
       });
     }
 
-    // Only agents can set isShowcase to true
     const showcaseValue = (user.role === 'agent' && isShowcase === true) ? true : false;
 
     const propertyData = {
@@ -74,13 +64,7 @@ const createProperty = async (req, res) => {
   }
 };
 
-/**
- * getAllProperties — GET /api/listings
- * -------------------------------------
- * Public endpoint — no auth required.
- * NEVER returns phone or email of the lister (privacy).
- * Supports query filters: ?type=fsbo|agent, ?minPrice, ?maxPrice, etc.
- */
+
 const getAllProperties = async (req, res) => {
   try {
     const {
@@ -90,8 +74,8 @@ const getAllProperties = async (req, res) => {
       maxPrice,
       bedrooms,
       bathrooms,
-      type,        // listingType filter: "fsbo" or "agent"
-      saleType,    // sale/rent filter
+      type,
+      saleType,
       location
     } = req.query;
 
@@ -104,30 +88,29 @@ const getAllProperties = async (req, res) => {
       if (maxPrice) filter.price.$lte = Number(maxPrice);
     }
 
-    if (bedrooms) filter.bedrooms = Number(bedrooms);
-    if (bathrooms) filter.bathrooms = Number(bathrooms);
+    if (bedrooms) filter.bedrooms = { $gte: Number(bedrooms) };
+    if (bathrooms) filter.bathrooms = { $gte: Number(bathrooms) };
 
-    // Filter by listingType (fsbo or agent)
     if (type) filter.listingType = type;
 
-    // Filter by sale/rent
     if (saleType) filter.type = saleType;
 
     let query = Property.find(filter);
+    const countFilter = { ...filter };
 
     if (location) {
       query = query.find({ $text: { $search: location } });
+      countFilter.$text = { $search: location };
     }
 
-    const total = await Property.countDocuments(filter);
+    const total = await Property.countDocuments(countFilter);
 
-    // Populate lister info but EXCLUDE phone and email (privacy)
     const properties = await query
       .sort({ createdAt: -1 })
       .skip((Number(page) - 1) * Number(limit))
       .limit(Number(limit))
       .populate('listedBy', 'username role isVerified profileImage location')
-      .lean();
+      .populate('reviews', 'rating');
 
     res.json({
       success: true,
@@ -154,12 +137,6 @@ const getAllProperties = async (req, res) => {
   }
 };
 
-/**
- * getPropertyById — GET /api/listings/:id
- * -----------------------------------------
- * Public endpoint — no auth required.
- * Returns listing details but NEVER includes phone or email (privacy).
- */
 const getPropertyById = async (req, res) => {
   try {
     const property = await Property.findById(req.params.id)
@@ -172,7 +149,7 @@ const getPropertyById = async (req, res) => {
         }
       });
 
-    if (!property || property.status !== 'active') {
+    if (!property || !['active', 'sold'].includes(property.status)) {
       return res.status(404).json({
         success: false,
         errorCode: 'NOT_FOUND',
@@ -196,12 +173,7 @@ const getPropertyById = async (req, res) => {
   }
 };
 
-/**
- * updateProperty — PUT /api/listings/:id
- * ----------------------------------------
- * Protected — requires JWT. Only the listing owner can update.
- * isShowcase can only be toggled by agents on their own listings.
- */
+
 const updateProperty = async (req, res) => {
   try {
     const updates = req.body;
@@ -219,8 +191,7 @@ const updateProperty = async (req, res) => {
       });
     }
 
-    // Only agents can toggle isShowcase on their own listings
-    if (updates.isShowcase !== undefined && req.user.role !== 'agent') {
+    if (updates.isShowcase === true && req.user.role !== 'agent') {
       return res.status(403).json({
         success: false,
         errorCode: 'FORBIDDEN',
@@ -257,10 +228,6 @@ const updateProperty = async (req, res) => {
   }
 };
 
-/**
- * permanentDeleteProperty — DELETE /api/listings/:id
- * Protected — requires JWT. Only the listing owner can delete.
- */
 const permanentDeleteProperty = async (req, res) => {
   try {
     const property = await Property.findOneAndDelete({
@@ -291,10 +258,7 @@ const permanentDeleteProperty = async (req, res) => {
   }
 };
 
-/**
- * getMyPropertyById — GET /api/listings/my/:id
- * Protected — requires JWT. Returns the user's own listing by ID.
- */
+
 const getMyPropertyById = async (req, res) => {
   try {
     const property = await Property.findOne({
@@ -326,17 +290,14 @@ const getMyPropertyById = async (req, res) => {
   }
 };
 
-/**
- * getMyProperties — GET /api/listings/my
- * Protected — requires JWT. Returns all listings by the current user.
- */
+
 const getMyProperties = async (req, res) => {
   try {
     const { page = 1, limit = 20 } = req.query;
 
     const filter = {
       listedBy: req.user.id,
-      status: 'active'
+      status: { $in: ['active', 'sold'] }
     };
 
     const total = await Property.countDocuments(filter);
@@ -346,7 +307,7 @@ const getMyProperties = async (req, res) => {
       .skip((Number(page) - 1) * Number(limit))
       .limit(Number(limit))
       .populate('listedBy', 'username role isVerified profileImage')
-      .lean();
+      .populate('reviews', 'rating');
 
     res.json({
       success: true,
@@ -373,16 +334,6 @@ const getMyProperties = async (req, res) => {
   }
 };
 
-/**
- * contactListing — POST /api/listings/:id/contact
- * --------------------------------------------------
- * THE ONLY WAY to get the lister's phone and email.
- * Requires a valid JWT token (user or agent).
- * Guests (no token) get 401: "Please log in to view contact information".
- *
- * Body: { name, email, phone, message? }
- * Response: { success: true, contact: { phone, email }, message: "Contact info retrieved" }
- */
 const contactListing = async (req, res) => {
   try {
     const property = await Property.findById(req.params.id)
@@ -396,7 +347,6 @@ const contactListing = async (req, res) => {
       });
     }
 
-    // Return the lister's phone and email
     res.json({
       success: true,
       contact: {

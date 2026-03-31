@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 
-// User model with roles: user and agent
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true, trim: true },
   email: { type: String, required: true, unique: true, lowercase: true },
@@ -9,7 +8,6 @@ const userSchema = new mongoose.Schema({
   phone: { type: String, required: true },
   location: { type: String, required: true },
 
-  // User role (assigned at signup)
   role: {
     type: String,
     enum: ['user', 'agent'],
@@ -27,7 +25,6 @@ const userSchema = new mongoose.Schema({
   emailVerificationExpires: Date,
   isEmailVerified: { type: Boolean, default: false },
 
-  // Agent-only fields
   licenseNumber: { type: String },
   licenseState: { type: String },
   brokerage: { type: String },
@@ -36,7 +33,6 @@ const userSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 }, { timestamps: true });
 
-// Hash password before save
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
   this.password = await bcrypt.hash(this.password, 10);
@@ -47,7 +43,6 @@ userSchema.methods.comparePassword = async function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };
 
-// Virtual reviews relationship
 userSchema.virtual('reviews', {
   ref: 'Review',
   localField: '_id',

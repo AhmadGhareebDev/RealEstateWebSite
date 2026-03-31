@@ -47,10 +47,19 @@
 const express = require('express');
 const router = express.Router();
 const roleCheck = require('../../middlewares/roleCheck')
-const { createPropertyReview, createAgentReview , deleteReview , updateReview, getPropertyReviews } = require('../../controllers/reviewController');
+const {
+  createPropertyReview,
+  createAgentReview,
+  deleteReview,
+  updateReview,
+  getPropertyReviews,
+  getMyReviews
+} = require('../../controllers/reviewController');
 const verifyJWT = require('../../middlewares/verifyJWT');
 const validate = require('../../middlewares/validate');
 const { propertyReviewSchema, agentReviewSchema , updateReviewSchema } = require('../../schemas/reviewSchemas');
+
+router.get('/my', verifyJWT, roleCheck('user', 'agent'), getMyReviews);
 
 router.route('/property/:propertyId')
     /**
@@ -109,7 +118,7 @@ router.route('/property/:propertyId')
      *             schema:
      *               $ref: '#/components/schemas/Error'
      */
-    .post(verifyJWT , roleCheck(['user']) , validate(propertyReviewSchema) , createPropertyReview )
+    .post(verifyJWT , roleCheck('user', 'agent') , validate(propertyReviewSchema) , createPropertyReview )
     /**
      * @swagger
      * /review/property/{propertyId}:
@@ -195,7 +204,7 @@ router.route('/agent/:agentId')
      *             schema:
      *               $ref: '#/components/schemas/Error'
      */
-    .post(verifyJWT , roleCheck(['user']) , validate(agentReviewSchema) , createAgentReview )
+    .post(verifyJWT , roleCheck('user', 'agent') , validate(agentReviewSchema) , createAgentReview )
 
 
 router.route('/:reviewId')
@@ -255,7 +264,7 @@ router.route('/:reviewId')
    *             schema:
    *               $ref: '#/components/schemas/Error'
    */
-  .patch(verifyJWT, roleCheck(['user']), validate(updateReviewSchema), updateReview)
+  .patch(verifyJWT, roleCheck('user', 'agent'), validate(updateReviewSchema), updateReview)
   
   /**
    * @swagger
@@ -298,6 +307,6 @@ router.route('/:reviewId')
    *             schema:
    *               $ref: '#/components/schemas/Error'
    */
-  .delete(verifyJWT, roleCheck(['user']), deleteReview);
+  .delete(verifyJWT, roleCheck('user', 'agent'), deleteReview);
 
 module.exports = router;

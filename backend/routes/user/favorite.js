@@ -69,7 +69,7 @@ router.route('/toggle/:propertyId')
      *             schema:
      *               $ref: '#/components/schemas/Error'
      */
-    .post(verifyJWT , roleCheck(['user']) , toggleFavorite)
+    .post(verifyJWT , roleCheck('user', 'agent') , toggleFavorite)
 
 router.route('/my')
     /**
@@ -134,6 +134,6 @@ router.route('/my')
      *             schema:
      *               $ref: '#/components/schemas/Error'
      */
-    .get(verifyJWT , roleCheck(['user']) , getMyFavorites)
+    .get(verifyJWT , roleCheck('user', 'agent') , getMyFavorites)
 
 module.exports =  router

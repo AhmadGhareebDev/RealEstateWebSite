@@ -23,7 +23,6 @@ const AgentVerification = require('../models/AgentVerification');
 
 const saltRounds = 10;
 
-// ── Realistic property images from Unsplash ──
 const img = {
   luxury: [
     'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=2069',
@@ -89,11 +88,9 @@ mongoose.connect(process.env.DATABASE_URL)
     await Review.deleteMany({});
     await AgentVerification.deleteMany({});
 
-    // ── Seed licenses ──
     await AgentVerification.insertMany(fakeLicenses);
     console.log(`✅ ${fakeLicenses.length} fake licenses seeded`);
 
-    // ── Seed users with hashed passwords ──
     const usersWithHashedPassword = await Promise.all(
       users.map(async (user) => ({
         ...user,

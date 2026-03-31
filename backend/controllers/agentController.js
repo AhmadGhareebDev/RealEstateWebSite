@@ -1,13 +1,7 @@
 const User = require('../models/User');
 const Property = require('../models/Property');
 
-/**
- * getAgentProfile — GET /api/agents/:agentId
- * --------------------------------------------
- * Public endpoint — returns agent's public profile info.
- * NEVER returns: licenseNumber, phone, email, password, refreshToken.
- * Returns: username, profileImage, location, role, listing count, reviews, ratings.
- */
+
 const getAgentProfile = async (req, res) => {
   try {
     const agent = await User.findOne({
@@ -31,11 +25,27 @@ const getAgentProfile = async (req, res) => {
       });
     }
 
-    // Count the agent's active listings
-    const listingCount = await Property.countDocuments({
+    const listings = await Property.find({
       listedBy: agent._id,
-      status: 'active'
-    });
+      status: { $in: ['active', 'sold'] }
+    })
+      .sort({ createdAt: -1 })
+      .select('title price location images status type bedrooms bathrooms area')
+      .populate('reviews', 'rating');
+
+    const listingCount = listings.length;
+
+    const listingsForResponse = listings.map((p) => ({
+      id: p._id,
+      title: p.title,
+      location: p.location,
+      price: p.price,
+      status: p.status,
+      type: p.type,
+      images: p.images,
+      averageRating: p.averageRating,
+      reviewCount: p.reviewCount
+    }));
 
     res.json({
       success: true,
@@ -51,7 +61,8 @@ const getAgentProfile = async (req, res) => {
         listingCount,
         averageRating: agent.averageRating,
         reviewCount: agent.reviewCount,
-        reviews: agent.reviews
+        reviews: agent.reviews,
+        listings: listingsForResponse
       }
     });
 

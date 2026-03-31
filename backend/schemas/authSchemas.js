@@ -1,10 +1,7 @@
 // schemas/authSchemas.js
 const { z } = require('zod');
 
-/**
- * Regular User Signup Schema
- * POST /api/auth/signup
- */
+
 const registerUserSchema = z.object({
   username: z.string().min(3).max(30).trim(),
   email: z.email().toLowerCase(),
@@ -14,13 +11,7 @@ const registerUserSchema = z.object({
   profileImage: z.string().url().optional()
 });
 
-/**
- * Agent Signup Schema
- * POST /api/auth/signup/agent
- * Requires license verification against the AgentVerification collection.
- * licenseState replaces the old "state" field for clarity.
- * brokerage is optional.
- */
+
 const registerAgentSchema = z.object({
   username: z.string().min(3).max(30).trim(),
   email: z.email().toLowerCase(),

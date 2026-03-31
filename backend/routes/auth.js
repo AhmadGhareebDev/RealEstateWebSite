@@ -37,7 +37,6 @@ router.post('/signup/agent',
 router.post('/verify-email', validate(verifyEmailSchema), verifyEmailCode);
 router.post('/resend-verification', resendVerificationCode);
 
-// Login
 router.post('/login', validate(loginUserSchema), loginUser);
 
 // Token management
