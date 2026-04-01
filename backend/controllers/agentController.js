@@ -1,7 +1,6 @@
 const User = require('../models/User');
 const Property = require('../models/Property');
 
-
 const getAgentProfile = async (req, res) => {
   try {
     const agent = await User.findOne({

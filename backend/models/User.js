@@ -29,8 +29,6 @@ const userSchema = new mongoose.Schema({
   licenseState: { type: String },
   brokerage: { type: String },
   isVerified: { type: Boolean, default: false },
-
-  createdAt: { type: Date, default: Date.now }
 }, { timestamps: true });
 
 userSchema.pre('save', async function (next) {

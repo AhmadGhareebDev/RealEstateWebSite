@@ -1,8 +1,6 @@
 const nodemailer = require('nodemailer');
 const isProd = process.env.NODE_ENV === 'production';
 
-
-
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,
   port: process.env.EMAIL_PORT,
@@ -13,9 +11,6 @@ const transporter = nodemailer.createTransport({
   }
 
 })
-
-
-
 
 const sendVerificationCode = async (email , username , code) => {
   const mailOptions = {
@@ -144,8 +139,6 @@ const sendVerificationCode = async (email , username , code) => {
     return false;
   }
 }
-
-
 
 module.exports = {
   sendVerificationCode

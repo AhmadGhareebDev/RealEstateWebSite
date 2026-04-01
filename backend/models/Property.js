@@ -36,10 +36,8 @@ const propertySchema = new mongoose.Schema({
   toObject: { virtuals: true }
 });
 
-// Location search index
 propertySchema.index({ location: 'text' });
 
-// Virtual reviews
 propertySchema.virtual('reviews', {
   ref: 'Review',
   localField: '_id',

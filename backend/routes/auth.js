@@ -19,27 +19,23 @@ const {
   verifyEmailSchema
 } = require('../schemas/authSchemas');
 
-// User signup
 router.post('/signup',
   uploadProfile.single('profileImage'),
   validate(registerUserSchema),
   registerUser
 );
 
-// Agent signup
 router.post('/signup/agent',
   uploadProfile.single('profileImage'),
   validate(registerAgentSchema),
   registerAgent
 );
 
-// Email verification
 router.post('/verify-email', validate(verifyEmailSchema), verifyEmailCode);
 router.post('/resend-verification', resendVerificationCode);
 
 router.post('/login', validate(loginUserSchema), loginUser);
 
-// Token management
 router.post('/refresh', refreshToken);
 router.post('/logout', logoutUser);
 

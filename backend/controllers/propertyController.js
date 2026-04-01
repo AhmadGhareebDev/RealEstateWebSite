@@ -11,7 +11,7 @@ const createProperty = async (req, res) => {
   const uploadedImages = req.files ? req.files.map(file => file.path) : [];
 
   try {
-    // Enforce listingType rules based on role
+
     if (user.role === 'user' && listingType !== 'fsbo') {
       return res.status(403).json({
         success: false,
@@ -64,7 +64,6 @@ const createProperty = async (req, res) => {
   }
 };
 
-
 const getAllProperties = async (req, res) => {
   try {
     const {
@@ -79,7 +78,6 @@ const getAllProperties = async (req, res) => {
       location
     } = req.query;
 
-    // Only show active listings publicly
     const filter = { status: 'active' };
 
     if (minPrice || maxPrice) {
@@ -173,7 +171,6 @@ const getPropertyById = async (req, res) => {
   }
 };
 
-
 const updateProperty = async (req, res) => {
   try {
     const updates = req.body;
@@ -258,7 +255,6 @@ const permanentDeleteProperty = async (req, res) => {
   }
 };
 
-
 const getMyPropertyById = async (req, res) => {
   try {
     const property = await Property.findOne({
@@ -266,7 +262,7 @@ const getMyPropertyById = async (req, res) => {
       listedBy: req.user.id
     }).populate("listedBy", "-password -refreshToken");
 
-    if (!property || property.status !== 'active') {
+    if (!property || !['active', 'sold', 'pending'].includes(property.status)) {
       return res.status(404).json({
         success: false,
         errorCode: 'NOT_FOUND',
@@ -290,14 +286,13 @@ const getMyPropertyById = async (req, res) => {
   }
 };
 
-
 const getMyProperties = async (req, res) => {
   try {
     const { page = 1, limit = 20 } = req.query;
 
     const filter = {
       listedBy: req.user.id,
-      status: { $in: ['active', 'sold'] }
+      status: { $in: ['active', 'sold', 'pending'] }
     };
 
     const total = await Property.countDocuments(filter);

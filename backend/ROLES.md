@@ -1,6 +1,6 @@
 # App Roles
 
-This document summarizes the application roles and what each role is allowed to do (capabilities), without describing specific API endpoints.
+This document summarizes the application roles and what each role is allowed to do (capabilities)
 
 ## Guest (not authenticated)
 - Browse listings and view listing details (public data only).

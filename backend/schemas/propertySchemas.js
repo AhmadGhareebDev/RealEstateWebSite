@@ -1,6 +1,5 @@
 const { z } = require('zod');
 
-
 const createPropertySchema = z.object({
   title:       z.string().min(5).max(100).trim(),
   price:       z.string().transform(val => Number(val)).pipe(z.number().positive().max(999999999)),
@@ -13,7 +12,6 @@ const createPropertySchema = z.object({
   listingType: z.enum(['fsbo', 'agent']),
   isShowcase:  z.string().transform(val => val === 'true').pipe(z.boolean()).optional()
 });
-
 
 const updatePropertySchema = z.object({
   title:       z.string().min(5).max(100).trim().optional(),
@@ -31,7 +29,6 @@ const updatePropertySchema = z.object({
 }).refine(data => Object.keys(data).length > 0, {
   message: "At least one field must be provided for update"
 });
-
 
 const contactListingSchema = z.object({
   name:    z.string().max(100).trim().optional(),

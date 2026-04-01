@@ -24,16 +24,13 @@ app.use(express.urlencoded({ extended: false }));
 app.use('/api/auth', limiter);
 app.use('/api/listings', limiter);
 
-// API Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/listings', require('./routes/user/property'));
 app.use('/api/agents', require('./routes/agents'));
-
-// Legacy routes
-app.use('/user', require('./routes/user/user'));
-app.use('/review', require('./routes/user/review'));
-app.use('/favorite', require('./routes/user/favorite'));
-app.use('/upload', require('./routes/user/upload'));
+app.use('/api/user', require('./routes/user/user'));
+app.use('/api/review', require('./routes/user/review'));
+app.use('/api/favorite', require('./routes/user/favorite'));
+app.use('/api/upload', require('./routes/user/upload'));
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
   explorer: true,

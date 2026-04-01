@@ -1,6 +1,5 @@
-// schemas/authSchemas.js
-const { z } = require('zod');
 
+const { z } = require('zod');
 
 const registerUserSchema = z.object({
   username: z.string().min(3).max(30).trim(),
@@ -10,7 +9,6 @@ const registerUserSchema = z.object({
   location: z.string().min(2).trim(),
   profileImage: z.string().url().optional()
 });
-
 
 const registerAgentSchema = z.object({
   username: z.string().min(3).max(30).trim(),

@@ -1,5 +1,7 @@
 const User = require('../models/User');
 const Property = require('../models/Property');
+const Review = require('../models/Review');
+const Favorite = require('../models/Favorite');
 
 const getMyProfile = async (req, res) => {
   try {
@@ -95,7 +97,11 @@ const updateMyProfile = async (req, res) => {
 };
 
 const deleteMyAccount = async (req, res) => {
-  try {
+  try {
+    const userProperties = await Property.find({ listedBy: req.user.id }).select('_id');
+    const propertyIds = userProperties.map(p => p._id);
+    await Review.deleteMany({ $or: [{ reviewer: req.user.id }, { agent: req.user.id }, { property: { $in: propertyIds } }] });
+    await Favorite.deleteMany({ $or: [{ user: req.user.id }, { property: { $in: propertyIds } }] });
     await Property.deleteMany({ listedBy: req.user.id });
     await User.findByIdAndDelete(req.user.id);
 

@@ -4,8 +4,6 @@ const fs = require('fs')
 const fsPromises = require('fs').promises
 const path = require('path')
 
-
-
 const logEvent = async (message , logName) => {
     const generateUUID = () => crypto.randomUUID()
     const date = `${format(new Date() , 'yyyy/MM/dd\tHH:mm:ss')}`
@@ -33,8 +31,6 @@ const logger = async (req , res , next) => {
 
     next()
 }
-
-
 
 module.exports = {
     logEvent ,
