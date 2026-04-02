@@ -4,6 +4,7 @@ const isProd = process.env.NODE_ENV === 'production';
 const jwt = require('jsonwebtoken');
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
 const { sendVerificationCode } = require('../services/email/sendVerificationCode');
+const { sendPasswordResetCode } = require('../services/email/sendPasswordReset')
 const AgentVerification = require('../models/AgentVerification');
 
 const registerUser = async (req, res) => {
@@ -188,7 +189,6 @@ const verifyEmailCode = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Verify error:', error);
     res.status(500).json({
       success: false,
       errorCode: 'SERVER_ERROR',
@@ -240,7 +240,6 @@ const resendVerificationCode = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Resend verification error:', error);
     return res.status(500).json({
       success: false,
       errorCode: 'SERVER_ERROR',
@@ -406,6 +405,121 @@ const logoutUser = async (req, res) => {
   res.status(204).send();
 };
 
+
+const forgetPassword = async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({
+      success: false,
+      errorCode: 'MISSING_EMAIL',
+      message: 'Email is required.'
+    });
+  }
+
+  try {
+
+    const user = await User.findOne({email: email.toLowerCase()});
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        errorCode: 'USER_NOT_FOUND',
+        message: 'User with this email does not exist.'
+      });
+    }
+
+    if (!user.isEmailVerified) {
+      return res.status(400).json({
+        success: false,
+        errorCode: 'EMAIL_NOT_VERIFIED',
+        message: 'Please verify your email first before resetting password.'
+      });
+    }
+
+    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+    user.passwordResetCode = resetCode;
+    user.passwordResetExpires = Date.now() + 15 * 60 * 1000;
+    await user.save();
+
+    await sendPasswordResetCode(user.email , user.username , resetCode);
+
+    res.json({
+      success: true,
+      message: 'Password reset code sent. Please check your email.'
+    });
+
+
+ 
+
+  } catch (error) {
+
+    return res.status(500).json({
+      success: false,
+      errorCode: 'SERVER_ERROR',
+      message: 'Server error. Please try again later.'
+    });
+
+  }
+}
+
+const resetPassword = async (req , res) => {
+  const {email , code , newPassword} = req.body;
+
+  if (!email || !code || !newPassword) {
+    return res.status(400).json({
+      success: false,
+      errorCode: 'MISSING_FIELDS',
+      message: 'Email, reset code, and new password are required.'
+    });
+  }
+
+  if (newPassword.length < 6) {
+    return res.status(400).json({
+      success: false,
+      errorCode: 'PASSWORD_TOO_SHORT',
+      message: 'Password must be at least 6 characters long.'
+    });
+  }
+
+  try {
+    const user = await User.findOne({
+      email: email.toLowerCase(),
+      passwordResetCode: code,
+      passwordResetExpires: { $gt: Date.now() }
+    });
+ 
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        errorCode: 'INVALID_OR_EXPIRED_CODE',
+        message: 'Invalid or expired reset code.'
+      });
+    }
+ 
+    user.password = newPassword;
+    user.passwordResetCode = undefined;
+    user.passwordResetExpires = undefined;
+    await user.save();
+ 
+    res.json({
+      success: true,
+      message: 'Password reset successfully. You can now login with your new password.'
+    });
+ 
+  } catch (error) {
+    console.error('Reset password error:', error);
+    return res.status(500).json({
+      success: false,
+      errorCode: 'SERVER_ERROR',
+      message: 'Server error. Please try again later.'
+    });
+  }
+
+
+}
+
 module.exports = {
   registerUser,
   verifyEmailCode,
@@ -413,5 +527,7 @@ module.exports = {
   logoutUser,
   refreshToken,
   registerAgent,
-  resendVerificationCode
+  resendVerificationCode,
+  forgetPassword,
+  resetPassword
 };

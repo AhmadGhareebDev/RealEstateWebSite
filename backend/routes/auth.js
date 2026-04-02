@@ -7,7 +7,9 @@ const {
   refreshToken,
   logoutUser,
   registerAgent,
-  resendVerificationCode
+  resendVerificationCode,
+  forgetPassword,
+  resetPassword
 } = require('../controllers/authController');
 
 const { uploadProfile } = require('../middlewares/upload');
@@ -16,7 +18,9 @@ const {
   registerUserSchema,
   registerAgentSchema,
   loginUserSchema,
-  verifyEmailSchema
+  verifyEmailSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema
 } = require('../schemas/authSchemas');
 
 router.post('/signup',
@@ -33,6 +37,8 @@ router.post('/signup/agent',
 
 router.post('/verify-email', validate(verifyEmailSchema), verifyEmailCode);
 router.post('/resend-verification', resendVerificationCode);
+router.post('/forgot-password', validate(forgotPasswordSchema), forgetPassword);
+router.post('/reset-password', validate(resetPasswordSchema), resetPassword);
 
 router.post('/login', validate(loginUserSchema), loginUser);
 
