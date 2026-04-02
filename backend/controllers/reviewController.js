@@ -32,9 +32,18 @@ const getPropertyReviews = async (req, res) => {
       .populate('reviewer', 'username profileImage')
       .sort({ createdAt: -1 });
       
+    const reviewCount = reviews.length;
+    const averageRating = reviewCount > 0 
+      ? Number((reviews.reduce((acc, r) => acc + r.rating, 0) / reviewCount).toFixed(1))
+      : 0;
+
     res.json({
       success: true,
-      data: reviews
+      data: {
+        reviews,
+        reviewCount,
+        averageRating
+      }
     });
   } catch (error) {
     console.error('Get property reviews error:', error);
@@ -45,6 +54,9 @@ const getPropertyReviews = async (req, res) => {
     });
   }
 };
+
+
+
 
 const createPropertyReview = async (req, res) => {
   const { rating, comment } = req.body;

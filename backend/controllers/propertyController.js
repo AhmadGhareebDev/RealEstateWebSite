@@ -138,14 +138,7 @@ const getAllProperties = async (req, res) => {
 const getPropertyById = async (req, res) => {
   try {
     const property = await Property.findById(req.params.id)
-      .populate("listedBy", "username role isVerified profileImage location")
-      .populate({
-        path: 'reviews',
-        populate: {
-          path: 'reviewer',
-          select: 'username profileImage'
-        }
-      });
+      .populate("listedBy", "username role isVerified profileImage location");
 
     if (!property || !['active', 'sold'].includes(property.status)) {
       return res.status(404).json({
