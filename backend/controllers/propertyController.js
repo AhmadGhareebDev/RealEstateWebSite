@@ -1,5 +1,6 @@
 const Property = require('../models/Property');
 const User = require('../models/User');
+const Favorite = require('../models/Favorite')
 
 const createProperty = async (req, res) => {
   const {
@@ -110,11 +111,26 @@ const getAllProperties = async (req, res) => {
       .populate('listedBy', 'username role isVerified profileImage location')
       .populate('reviews', 'rating');
 
+
+
+      let favoritedIds =  new Set();
+
+      if (req.user) {
+        const favorites = await Favorite.find({user: req.user.id}).select('property');
+        favoritedIds = new Set(favorites.map(fav => fav.property.toString()));
+      }
+
+      const enriched = properties.map(p => ({
+        ...p.toObject(),
+        isFav: favoritedIds.has(p._id.toString())
+      }
+      ));
+
     res.json({
       success: true,
       message: "Listings retrieved successfully",
       data: {
-        properties,
+        properties: enriched,
         pagination: {
           currentPage: Number(page),
           totalPages: Math.ceil(total / Number(limit)),
@@ -148,10 +164,15 @@ const getPropertyById = async (req, res) => {
       });
     }
 
+    const isFav = req.user ? !!(await Favorite.findOne({ user: req.user.id, property: property._id })) : false;
+
     res.json({
       success: true,
       message: "Listing retrieved successfully",
-      data: property
+      data: {
+        ...property.toObject(),
+        isFav
+      }
     });
 
   } catch (error) {

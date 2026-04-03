@@ -11,6 +11,7 @@ const {
   contactListing
 } = require('../../controllers/propertyController');
 const verifyJWT = require('../../middlewares/verifyJWT');
+const softAuth = require('../../middlewares/softAuth')
 const { uploadProperty } = require('../../middlewares/upload');
 const validate = require('../../middlewares/validate');
 const {
@@ -25,12 +26,12 @@ router.post('/',
   createProperty
 );
 
-router.get('/', getAllProperties);
+router.get('/', softAuth, getAllProperties);
 
 router.get('/my', verifyJWT, getMyProperties);
 router.get('/my/:id', verifyJWT, getMyPropertyById);
 
-router.get('/:id', getPropertyById);
+router.get('/:id', softAuth, getPropertyById);
 
 router.post('/:id/contact',
   verifyJWT,
