@@ -5,6 +5,7 @@ require('dotenv').config();
 const User = require('../models/User');
 const Property = require('../models/Property');
 const Review = require('../models/Review');
+const AgentRating = require('../models/AgentRating');
 const AgentVerification = require('../models/AgentVerification');
 
 const saltRounds = 10;
@@ -45,7 +46,14 @@ const fakeLicenses = [
   { licenseNumber: '11223344', state: 'IL', agentName: 'Robert Lee' },
   { licenseNumber: '99887766', state: 'GA', agentName: 'Emily Davis' },
   { licenseNumber: '20251117', state: 'CA', agentName: 'Jamal Unes' },
-  { licenseNumber: '55556666', state: 'NY', agentName: 'Ahmed Khan' }
+  { licenseNumber: '55556666', state: 'NY', agentName: 'Ahmed Khan' },
+  { licenseNumber: '44443333', state: 'TX', agentName: 'Nora Ahmed' },
+  { licenseNumber: '12121212', state: 'CA', agentName: 'Omar Salem' },
+  { licenseNumber: '34343434', state: 'FL', agentName: 'Layla Hassan' },
+  { licenseNumber: '56565656', state: 'WA', agentName: 'Peter Miles' },
+  { licenseNumber: '78787878', state: 'NV', agentName: 'Hana Noor' },
+  { licenseNumber: '90909090', state: 'AZ', agentName: 'Fady Nabil' },
+  { licenseNumber: '11112222', state: 'CO', agentName: 'Yara Adel' }
 ];
 
 const users = [
@@ -59,7 +67,14 @@ const users = [
   { username: 'jamal_agent', email: 'jamal@gmail.com',    password: '123456', phone: '+201011112222', location: 'Cairo',     role: 'agent', licenseNumber: '20251117', licenseState: 'CA', isVerified: true },
   { username: 'sarah_pro',   email: 'sarah@gmail.com',    password: '123456', phone: '+201033334444', location: 'New Cairo', role: 'agent', licenseNumber: '8854321',  licenseState: 'NY', isVerified: true },
   { username: 'david_tx',    email: 'david@gmail.com',    password: '123456', phone: '+201055556666', location: 'Maadi',     role: 'agent', licenseNumber: '0678901',  licenseState: 'TX', isVerified: true },
-  { username: 'luxe_agent',  email: 'luxe@gmail.com',     password: '123456', phone: '+201077778888', location: 'Zamalek',   role: 'agent', licenseNumber: '3344556',  licenseState: 'FL', isVerified: true }
+  { username: 'luxe_agent',  email: 'luxe@gmail.com',     password: '123456', phone: '+201077778888', location: 'Zamalek',   role: 'agent', licenseNumber: '3344556',  licenseState: 'FL', isVerified: true },
+  { username: 'nora_tx',     email: 'nora@gmail.com',     password: '123456', phone: '+201066661111', location: 'Madinaty',  role: 'agent', licenseNumber: '44443333', licenseState: 'TX', isVerified: true },
+  { username: 'omar_ca',     email: 'omar@gmail.com',     password: '123456', phone: '+201066662222', location: 'October',   role: 'agent', licenseNumber: '12121212', licenseState: 'CA', isVerified: true },
+  { username: 'layla_fl',    email: 'layla@gmail.com',    password: '123456', phone: '+201066663333', location: 'Heliopolis',role: 'agent', licenseNumber: '34343434', licenseState: 'FL', isVerified: true },
+  { username: 'peter_wa',    email: 'peter@gmail.com',    password: '123456', phone: '+201066664444', location: 'Nasr City', role: 'agent', licenseNumber: '56565656', licenseState: 'WA', isVerified: true },
+  { username: 'hana_nv',     email: 'hana@gmail.com',     password: '123456', phone: '+201066665555', location: 'Giza',      role: 'agent', licenseNumber: '78787878', licenseState: 'NV', isVerified: true },
+  { username: 'fady_az',     email: 'fady@gmail.com',     password: '123456', phone: '+201066666666', location: 'Maadi',     role: 'agent', licenseNumber: '90909090', licenseState: 'AZ', isVerified: true },
+  { username: 'yara_co',     email: 'yara@gmail.com',     password: '123456', phone: '+201066667777', location: 'Zayed',     role: 'agent', licenseNumber: '11112222', licenseState: 'CO', isVerified: true }
 ];
 
 mongoose.connect(process.env.DATABASE_URL)
@@ -69,6 +84,7 @@ mongoose.connect(process.env.DATABASE_URL)
     await User.deleteMany({});
     await Property.deleteMany({});
     await Review.deleteMany({});
+    await AgentRating.deleteMany({});
     await AgentVerification.deleteMany({});
 
     await AgentVerification.insertMany(fakeLicenses);
@@ -85,7 +101,7 @@ mongoose.connect(process.env.DATABASE_URL)
     );
 
     const createdUsers = await User.insertMany(usersWithHashedPassword);
-    console.log(`✅ ${createdUsers.length} users seeded (5 users + 4 agents)`);
+    console.log(`✅ ${createdUsers.length} users seeded`);
 
     const u = Object.fromEntries(createdUsers.map(u => [u.username, u._id]));
 
@@ -160,12 +176,85 @@ mongoose.connect(process.env.DATABASE_URL)
     ]);
     console.log('✅ 8 reviews seeded');
 
+    const agentRatings = [
+      { reviewer: u['ahmed123'], agent: u['jamal_agent'], rating: 5 },
+      { reviewer: u['mohamed22'], agent: u['jamal_agent'], rating: 5 },
+      { reviewer: u['fatma_ali'], agent: u['jamal_agent'], rating: 4 },
+      { reviewer: u['youssef_k'], agent: u['jamal_agent'], rating: 5 },
+      { reviewer: u['mariam_s'], agent: u['jamal_agent'], rating: 4 },
+
+      { reviewer: u['ahmed123'], agent: u['sarah_pro'], rating: 4 },
+      { reviewer: u['mohamed22'], agent: u['sarah_pro'], rating: 5 },
+      { reviewer: u['fatma_ali'], agent: u['sarah_pro'], rating: 5 },
+      { reviewer: u['youssef_k'], agent: u['sarah_pro'], rating: 4 },
+      { reviewer: u['mariam_s'], agent: u['sarah_pro'], rating: 5 },
+
+      { reviewer: u['ahmed123'], agent: u['david_tx'], rating: 4 },
+      { reviewer: u['mohamed22'], agent: u['david_tx'], rating: 4 },
+      { reviewer: u['fatma_ali'], agent: u['david_tx'], rating: 5 },
+      { reviewer: u['youssef_k'], agent: u['david_tx'], rating: 4 },
+      { reviewer: u['mariam_s'], agent: u['david_tx'], rating: 3 },
+
+      { reviewer: u['ahmed123'], agent: u['luxe_agent'], rating: 5 },
+      { reviewer: u['mohamed22'], agent: u['luxe_agent'], rating: 5 },
+      { reviewer: u['fatma_ali'], agent: u['luxe_agent'], rating: 5 },
+      { reviewer: u['youssef_k'], agent: u['luxe_agent'], rating: 4 },
+      { reviewer: u['mariam_s'], agent: u['luxe_agent'], rating: 5 },
+
+      { reviewer: u['ahmed123'], agent: u['nora_tx'], rating: 5 },
+      { reviewer: u['mohamed22'], agent: u['nora_tx'], rating: 4 },
+      { reviewer: u['fatma_ali'], agent: u['nora_tx'], rating: 4 },
+
+      { reviewer: u['youssef_k'], agent: u['omar_ca'], rating: 5 },
+      { reviewer: u['mariam_s'], agent: u['omar_ca'], rating: 5 },
+
+      { reviewer: u['ahmed123'], agent: u['layla_fl'], rating: 4 },
+      { reviewer: u['mohamed22'], agent: u['layla_fl'], rating: 4 },
+
+      { reviewer: u['fatma_ali'], agent: u['peter_wa'], rating: 5 },
+
+      { reviewer: u['youssef_k'], agent: u['hana_nv'], rating: 3 },
+      { reviewer: u['mariam_s'], agent: u['fady_az'], rating: 5 },
+      { reviewer: u['ahmed123'], agent: u['yara_co'], rating: 4 }
+    ];
+
+    await AgentRating.insertMany(agentRatings);
+
+    const agentUsers = createdUsers.filter((x) => x.role === 'agent');
+
+    for (const agent of agentUsers) {
+      const [stats] = await AgentRating.aggregate([
+        { $match: { agent: agent._id } },
+        {
+          $group: {
+            _id: '$agent',
+            count: { $sum: 1 },
+            sum: { $sum: '$rating' },
+            average: { $avg: '$rating' }
+          }
+        }
+      ]);
+
+      const count = stats?.count || 0;
+      const sum = stats?.sum || 0;
+      const average = count > 0 ? Number((sum / count).toFixed(2)) : 0;
+
+      await User.findByIdAndUpdate(agent._id, {
+        profileRatingCount: count,
+        profileRatingScoreSum: sum,
+        profileRatingAverage: average
+      });
+    }
+
+    console.log(`✅ ${agentRatings.length} agent profile ratings seeded`);
+
     console.log('\n🎉 COMPLETE SEED SUCCESSFUL!');
     console.log('──────────────────────────────');
     console.log(`   ${fakeLicenses.length} fake licenses`);
-    console.log(`   5 regular users + 4 agents = 9 users`);
+    console.log(`   ${createdUsers.length} total users`);
     console.log(`   ${fsboListings.length} FSBO + ${agentListings.length} Agent = ${allListings.length} listings`);
     console.log(`   8 reviews`);
+    console.log(`   ${agentRatings.length} profile ratings`);
     console.log('──────────────────────────────');
     console.log('Login as user:  ahmed@gmail.com / 123456');
     console.log('Login as agent: jamal@gmail.com / 123456');

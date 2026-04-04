@@ -67,6 +67,7 @@ const createProperty = async (req, res) => {
 
 const getAllProperties = async (req, res) => {
   try {
+    const viewerId = req.user?.id ? String(req.user.id) : null;
     const {
       page = 1,
       limit = 20,
@@ -122,9 +123,9 @@ const getAllProperties = async (req, res) => {
 
       const enriched = properties.map(p => ({
         ...p.toObject(),
-        isFav: favoritedIds.has(p._id.toString())
-      }
-      ));
+        isFav: favoritedIds.has(p._id.toString()),
+        isOwner: !!viewerId && !!p.listedBy?._id && String(p.listedBy._id) === viewerId
+      }));
 
     res.json({
       success: true,
@@ -153,6 +154,7 @@ const getAllProperties = async (req, res) => {
 
 const getPropertyById = async (req, res) => {
   try {
+    const viewerId = req.user?.id ? String(req.user.id) : null;
     const property = await Property.findById(req.params.id)
       .populate("listedBy", "username role isVerified profileImage location");
 
@@ -171,7 +173,8 @@ const getPropertyById = async (req, res) => {
       message: "Listing retrieved successfully",
       data: {
         ...property.toObject(),
-        isFav
+        isFav,
+        isOwner: !!viewerId && !!property.listedBy?._id && String(property.listedBy._id) === viewerId
       }
     });
 

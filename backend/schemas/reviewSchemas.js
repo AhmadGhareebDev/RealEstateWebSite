@@ -17,4 +17,8 @@ const updateReviewSchema = z.object({
   message: "At least one field (rating or comment) must be provided"
 });
 
-module.exports = { propertyReviewSchema, agentReviewSchema , updateReviewSchema };
+const agentProfileRatingSchema = z.object({
+  rating: z.number().int().min(1).max(5)
+});
+
+module.exports = { propertyReviewSchema, agentReviewSchema , updateReviewSchema, agentProfileRatingSchema };

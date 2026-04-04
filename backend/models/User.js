@@ -31,7 +31,13 @@ const userSchema = new mongoose.Schema({
   licenseState: { type: String },
   brokerage: { type: String },
   isVerified: { type: Boolean, default: false },
+
+  profileRatingAverage: { type: Number, default: 0, min: 0, max: 5 },
+  profileRatingCount: { type: Number, default: 0, min: 0 },
+  profileRatingScoreSum: { type: Number, default: 0, min: 0 }
 }, { timestamps: true });
+
+userSchema.index({ role: 1, profileRatingAverage: -1, profileRatingCount: -1, createdAt: -1 });
 
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
