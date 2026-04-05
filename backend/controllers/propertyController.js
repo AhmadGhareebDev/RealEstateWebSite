@@ -1,6 +1,7 @@
+const ViewEvent = require('../models/ViewEvent');
 const Property = require('../models/Property');
-const User = require('../models/User');
 const Favorite = require('../models/Favorite')
+const hashAnonKey = require('../utils/hashAnonKey');
 
 const createProperty = async (req, res) => {
   const {
@@ -77,7 +78,8 @@ const getAllProperties = async (req, res) => {
       bathrooms,
       type,
       saleType,
-      location
+      location,
+      sortBy = 'newest'
     } = req.query;
 
     const filter = { status: 'active' };
@@ -95,22 +97,99 @@ const getAllProperties = async (req, res) => {
 
     if (saleType) filter.type = saleType;
 
-    let query = Property.find(filter);
     const countFilter = { ...filter };
 
     if (location) {
-      query = query.find({ $text: { $search: location } });
       countFilter.$text = { $search: location };
     }
 
+    const normalizedSortBy = String(sortBy || 'newest').toLowerCase();
     const total = await Property.countDocuments(countFilter);
 
-    const properties = await query
-      .sort({ createdAt: -1 })
-      .skip((Number(page) - 1) * Number(limit))
-      .limit(Number(limit))
-      .populate('listedBy', 'username role isVerified profileImage location')
-      .populate('reviews', 'rating');
+    let properties;
+
+    if (normalizedSortBy === 'rating') {
+      const pipeline = [
+        { $match: countFilter },
+        {
+          $lookup: {
+            from: 'reviews',
+            localField: '_id',
+            foreignField: 'property',
+            as: 'reviews'
+          }
+        },
+        {
+          $addFields: {
+            averageRating: {
+              $ifNull: [{ $avg: '$reviews.rating' }, 0]
+            },
+            reviewCount: { $size: '$reviews' }
+          }
+        },
+        {
+          $sort: {
+            averageRating: -1,
+            reviewCount: -1,
+            createdAt: -1
+          }
+        },
+        { $skip: (Number(page) - 1) * Number(limit) },
+        { $limit: Number(limit) },
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'listedBy',
+            foreignField: '_id',
+            as: 'listedByDoc'
+          }
+        },
+        {
+          $unwind: {
+            path: '$listedByDoc',
+            preserveNullAndEmptyArrays: true
+          }
+        },
+        {
+          $addFields: {
+            listedBy: {
+              _id: '$listedByDoc._id',
+              username: '$listedByDoc.username',
+              role: '$listedByDoc.role',
+              isVerified: '$listedByDoc.isVerified',
+              profileImage: '$listedByDoc.profileImage',
+              location: '$listedByDoc.location',
+              brokerage: '$listedByDoc.brokerage'
+            }
+          }
+        },
+        {
+          $project: {
+            listedByDoc: 0,
+            reviews: 0
+          }
+        }
+      ];
+
+      properties = await Property.aggregate(pipeline);
+    } else {
+      const query = Property.find(countFilter);
+      const sort = normalizedSortBy === 'views'
+        ? {
+            viewsTotal: -1,
+            viewsUnique30d: -1,
+            lastViewedAt: -1,
+            createdAt: -1
+          }
+        : { createdAt: -1 };
+
+      properties = await query
+        .sort(sort)
+        .skip((Number(page) - 1) * Number(limit))
+        .limit(Number(limit))
+        .populate('listedBy', 'username role isVerified profileImage location brokerage')
+        .populate('reviews', 'rating');
+    }
 
 
 
@@ -121,11 +200,17 @@ const getAllProperties = async (req, res) => {
         favoritedIds = new Set(favorites.map(fav => fav.property.toString()));
       }
 
-      const enriched = properties.map(p => ({
-        ...p.toObject(),
-        isFav: favoritedIds.has(p._id.toString()),
-        isOwner: !!viewerId && !!p.listedBy?._id && String(p.listedBy._id) === viewerId
-      }));
+      const enriched = properties.map((p) => {
+        const base = typeof p.toObject === 'function' ? p.toObject() : p;
+        const propertyId = String(base._id);
+        const listedById = base?.listedBy?._id ? String(base.listedBy._id) : null;
+
+        return {
+          ...base,
+          isFav: favoritedIds.has(propertyId),
+          isOwner: !!viewerId && !!listedById && listedById === viewerId
+        };
+      });
 
     res.json({
       success: true,
@@ -151,7 +236,72 @@ const getAllProperties = async (req, res) => {
     });
   }
 };
+const trackPropertyView = async (req, property) => {                     
+  const targetId = property._id;                                            
+  const viewerUserId = req.user?.id ? String(req.user.id) : null;          
 
+  if (viewerUserId && String(property.listedBy?._id || property.listedBy) === viewerUserId) {
+    return { changed: false };                                                                  
+  }
+
+  const now = new Date();                                                    
+
+  const totalWindowMs = 60 * 60 * 1000;                                     
+  const unique30dWindowMs = 30 * 24 * 60 * 60 * 1000;                       
+
+  const totalWindowStart = new Date(now.getTime() - totalWindowMs);       
+  const uniqueWindowStart = new Date(now.getTime() - unique30dWindowMs);   
+
+  const anonKeyHash = viewerUserId ? null : hashAnonKey(req);            
+
+  const identityFilter = viewerUserId                                     
+    ? { viewerUserId }
+    : { anonKeyHash };
+
+  const recentView = await ViewEvent.findOne({                               
+    targetType: 'property',
+    targetId,
+    ...identityFilter,
+    viewedAt: { $gte: totalWindowStart }
+  }).select('_id');
+
+  const recentUnique30d = await ViewEvent.findOne({                          
+    targetType: 'property',
+    targetId,
+    ...identityFilter,
+    viewedAt: { $gte: uniqueWindowStart }
+  }).select('_id');
+
+  if (recentView) {
+    return { changed: false };
+  }
+
+  await ViewEvent.create({                                                
+    targetType: 'property',
+    targetId,
+    viewerUserId: viewerUserId || null,
+    anonKeyHash: anonKeyHash || null,
+    source: 'web',
+    viewedAt: now
+  });
+
+  const inc = { viewsTotal: 1 };                                           
+  if (!recentUnique30d) {
+    inc.viewsUnique30d = 1;                                               
+  }
+
+  const updatedCounters = await Property.findByIdAndUpdate(targetId, {                            
+    $inc: inc,
+    $set: { lastViewedAt: now }
+  }, { new: true })
+    .select('viewsTotal viewsUnique30d lastViewedAt')
+    .lean();
+
+  return {
+    changed: true,
+    counters: updatedCounters
+  };
+};
 const getPropertyById = async (req, res) => {
   try {
     const viewerId = req.user?.id ? String(req.user.id) : null;
@@ -168,13 +318,25 @@ const getPropertyById = async (req, res) => {
 
     const isFav = req.user ? !!(await Favorite.findOne({ user: req.user.id, property: property._id })) : false;
 
+    const trackResult = await trackPropertyView(req, property);
+    const counters = trackResult?.changed
+      ? trackResult.counters
+      : {
+          viewsTotal: property.viewsTotal || 0,
+          viewsUnique30d: property.viewsUnique30d || 0,
+          lastViewedAt: property.lastViewedAt || null
+        };
+
     res.json({
       success: true,
       message: "Listing retrieved successfully",
       data: {
         ...property.toObject(),
         isFav,
-        isOwner: !!viewerId && !!property.listedBy?._id && String(property.listedBy._id) === viewerId
+        isOwner: !!viewerId && !!property.listedBy?._id && String(property.listedBy._id) === viewerId,
+        viewsTotal: counters.viewsTotal || 0,
+        viewsUnique30d: counters.viewsUnique30d || 0,
+        lastViewedAt: counters.lastViewedAt || null
       }
     });
 

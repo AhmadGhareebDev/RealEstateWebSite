@@ -34,10 +34,16 @@ const userSchema = new mongoose.Schema({
 
   profileRatingAverage: { type: Number, default: 0, min: 0, max: 5 },
   profileRatingCount: { type: Number, default: 0, min: 0 },
-  profileRatingScoreSum: { type: Number, default: 0, min: 0 }
+  profileRatingScoreSum: { type: Number, default: 0, min: 0 },
+
+  profileViewsTotal: { type: Number, default: 0, min: 0 },
+  profileViewsUnique30d: { type: Number, default: 0, min: 0 },
+  profileLastViewedAt: { type: Date, default: null },
 }, { timestamps: true });
 
 userSchema.index({ role: 1, profileRatingAverage: -1, profileRatingCount: -1, createdAt: -1 });
+userSchema.index({role: 1 , profileViewsTotal: -1, profileLastViewedAt: -1});
+userSchema.index({ role: 1, profileViewsUnique30d: -1, profileLastViewedAt: -1 });
 
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();

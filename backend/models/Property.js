@@ -29,14 +29,21 @@ const propertySchema = new mongoose.Schema({
     type: String,
     enum: ['active', 'sold', 'rented', 'pending'],
     default: 'active'
-  }
+  },
+
+  viewsTotal: { type: Number , default: 0 , min: 0},
+  viewsUnique30d: { type: Number , default: 0 , min: 0},
+  lastViewedAt: { type: Date , default: null },
+
 }, {
   timestamps: true,
   toJSON: { virtuals: true },
-  toObject: { virtuals: true }
+  toObject: { virtuals: true },
 });
 
 propertySchema.index({ location: 'text' });
+propertySchema.index({ viewsTotal: 1, lastViewedAt: -1 });
+propertySchema.index({ viewsUnique30d: 1, lastViewedAt: -1 });
 
 propertySchema.virtual('reviews', {
   ref: 'Review',

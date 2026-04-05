@@ -1,6 +1,8 @@
 const User = require('../models/User');
 const Property = require('../models/Property');
 const AgentRating = require('../models/AgentRating');
+const ViewEvent = require('../models/ViewEvent');
+const hashAnonKey = require('../utils/hashAnonKey');
 
 const RATING_PRIOR_MEAN = 4;
 const RATING_PRIOR_WEIGHT = 10;
@@ -48,6 +50,66 @@ const recalculateAgentProfileRatingStats = async (agentId) => {
   };
 };
 
+const trackAgentProfileView = async (req, agent) => {
+  const targetId = agent._id;
+  const viewerUserId = req.user?.id ? String(req.user.id) : null;
+
+  if (viewerUserId && String(agent._id) === viewerUserId) {
+    return { changed: false };
+  }
+
+  const now = new Date();
+  const totalWindowStart = new Date(now.getTime() - (60 * 60 * 1000));
+  const uniqueWindowStart = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+
+  const anonKeyHash = viewerUserId ? null : hashAnonKey(req);
+  const identityFilter = viewerUserId ? { viewerUserId } : { anonKeyHash };
+
+  const recentView = await ViewEvent.findOne({
+    targetType: 'agent',
+    targetId,
+    ...identityFilter,
+    viewedAt: { $gte: totalWindowStart }
+  }).select('_id');
+
+  if (recentView) {
+    return { changed: false };
+  }
+
+  const recentUnique30d = await ViewEvent.findOne({
+    targetType: 'agent',
+    targetId,
+    ...identityFilter,
+    viewedAt: { $gte: uniqueWindowStart }
+  }).select('_id');
+
+  await ViewEvent.create({
+    targetType: 'agent',
+    targetId,
+    viewerUserId: viewerUserId || null,
+    anonKeyHash: anonKeyHash || null,
+    source: 'web',
+    viewedAt: now
+  });
+
+  const inc = { profileViewsTotal: 1 };
+  if (!recentUnique30d) {
+    inc.profileViewsUnique30d = 1;
+  }
+
+  const updatedCounters = await User.findByIdAndUpdate(targetId, {
+    $inc: inc,
+    $set: { profileLastViewedAt: now }
+  }, { new: true })
+    .select('profileViewsTotal profileViewsUnique30d profileLastViewedAt')
+    .lean();
+
+  return {
+    changed: true,
+    counters: updatedCounters
+  };
+};
+
 const getAgentProfile = async (req, res) => {
   try {
     const viewerId = req.user?.id ? String(req.user.id) : null;
@@ -55,7 +117,7 @@ const getAgentProfile = async (req, res) => {
       _id: req.params.agentId,
       role: 'agent'
     })
-      .select('username profileImage location role isVerified createdAt profileRatingAverage profileRatingCount licenseNumber licenseState brokerage')
+      .select('username profileImage location role isVerified createdAt profileRatingAverage profileRatingCount profileViewsTotal profileViewsUnique30d profileLastViewedAt licenseNumber licenseState brokerage')
       .populate({
         path: 'reviews',
         populate: {
@@ -81,6 +143,15 @@ const getAgentProfile = async (req, res) => {
       .populate('reviews', 'rating');
 
     const listingCount = listings.length;
+
+    const trackResult = await trackAgentProfileView(req, agent);
+    const viewCounters = trackResult?.changed
+      ? trackResult.counters
+      : {
+          profileViewsTotal: agent.profileViewsTotal || 0,
+          profileViewsUnique30d: agent.profileViewsUnique30d || 0,
+          profileLastViewedAt: agent.profileLastViewedAt || null
+        };
 
     const listingsForResponse = listings.map((p) => ({
       id: p._id,
@@ -115,6 +186,9 @@ const getAgentProfile = async (req, res) => {
         reviewCount: agent.profileRatingCount,
         profileRatingAverage: agent.profileRatingAverage,
         profileRatingCount: agent.profileRatingCount,
+        profileViewsTotal: viewCounters.profileViewsTotal || 0,
+        profileViewsUnique30d: viewCounters.profileViewsUnique30d || 0,
+        profileLastViewedAt: viewCounters.profileLastViewedAt || null,
         bayesianScore: Number(
           (((agent.profileRatingCount * agent.profileRatingAverage) + (RATING_PRIOR_WEIGHT * RATING_PRIOR_MEAN))
             / (agent.profileRatingCount + RATING_PRIOR_WEIGHT)).toFixed(3)
@@ -201,6 +275,9 @@ const getAllAgents = async (req, res) => {
             licenseState: 1,
             profileRatingAverage: 1,
             profileRatingCount: 1,
+            profileViewsTotal: 1,
+            profileViewsUnique30d: 1,
+            profileLastViewedAt: 1,
             bayesianScore: { $round: ['$bayesianScore', 3] },
             maskedLicenseNumber: {
               $let: {
@@ -235,10 +312,33 @@ const getAllAgents = async (req, res) => {
         ...agent,
         isSelf: !!viewerId && String(agent._id) === viewerId
       }));
+    } else if (sortBy === 'views') {
+      agents = await User.find(filter)
+        .select('username profileImage location role isVerified createdAt brokerage licenseNumber licenseState profileRatingAverage profileRatingCount profileViewsTotal profileViewsUnique30d profileLastViewedAt')
+        .sort({
+          profileViewsTotal: -1,
+          profileViewsUnique30d: -1,
+          profileLastViewedAt: -1,
+          createdAt: -1
+        })
+        .skip(skip)
+        .limit(limit)
+        .lean();
+
+      agents = agents.map((agent) => ({
+        ...agent,
+        licenseNumber: undefined,
+        maskedLicenseNumber: maskLicenseNumber(agent.licenseNumber),
+        isSelf: !!viewerId && String(agent._id) === viewerId,
+        bayesianScore: Number(
+          (((agent.profileRatingCount * agent.profileRatingAverage) + (RATING_PRIOR_WEIGHT * RATING_PRIOR_MEAN))
+            / (agent.profileRatingCount + RATING_PRIOR_WEIGHT)).toFixed(3)
+        )
+      }));
     } else {
       const sort = { createdAt: -1 };
       agents = await User.find(filter)
-        .select('username profileImage location role isVerified createdAt brokerage licenseNumber licenseState profileRatingAverage profileRatingCount')
+        .select('username profileImage location role isVerified createdAt brokerage licenseNumber licenseState profileRatingAverage profileRatingCount profileViewsTotal profileViewsUnique30d profileLastViewedAt')
         .sort(sort)
         .skip(skip)
         .limit(limit)
